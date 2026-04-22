@@ -2,10 +2,12 @@
  * Pure dashboard data builders.
  *
  * This module converts raw PR, issue, and miner datasets into UI-facing models
- * for trends, overview sections, KPIs, and featured contributors.
+ * for trends, overview sections, KPIs, and featured work highlights.
  *
  * Most dashboard sections are driven by the caller-provided time range.
- * Featured contributors intentionally use a fixed 35-day lookback window.
+ * Featured work uses the selected range, except "all" which falls back
+ * to a fixed 35-day lookback window for dashboard relevance. It highlights
+ * standout merged PRs and completed bounty issues (not open or in-flight work).
  */
 import { type CommitLog, type MinerEvaluation } from '../../api';
 import { type IssueBounty } from '../../api/models/Issues';
@@ -58,6 +60,64 @@ export interface DashboardFeaturedContributor {
     unit: string;
   }>;
   repos: string[];
+}
+
+/** One merged PR per repository (best in window by score / impact). */
+export interface DashboardFeaturedPr {
+  repository: string;
+  pullRequestNumber: number;
+  title: string;
+  author: string;
+  score: number;
+  additions: number;
+  deletions: number;
+}
+
+/** One completed bounty per repository (highest target in window). */
+export interface DashboardFeaturedIssue {
+  id: number;
+  repositoryFullName: string;
+  issueNumber: number;
+  title: string;
+  targetBounty: number;
+  status: IssueBounty['status'];
+}
+
+const MAX_FEATURED_WORK_PER_KIND = 3;
+
+const takeUniqueByRepo = <T extends { repository: string }>(
+  sorted: T[],
+  max: number,
+): T[] => {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of sorted) {
+    if (seen.has(item.repository)) continue;
+    seen.add(item.repository);
+    out.push(item);
+    if (out.length >= max) break;
+  }
+  return out;
+};
+
+const takeUniqueIssueRepo = <T extends { repositoryFullName: string }>(
+  sorted: T[],
+  max: number,
+): T[] => {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of sorted) {
+    if (seen.has(item.repositoryFullName)) continue;
+    seen.add(item.repositoryFullName);
+    out.push(item);
+    if (out.length >= max) break;
+  }
+  return out;
+};
+
+export interface DashboardFeaturedWork {
+  prs: DashboardFeaturedPr[];
+  issues: DashboardFeaturedIssue[];
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -836,4 +896,133 @@ export const buildFeaturedDiscoveryContributors = (
     contributors.push(highestIssueTokenScoreMiner);
 
   return contributors;
+};
+
+const getFeaturedWorkWindow = (range: TrendTimeRange, now = new Date()) =>
+  range === 'all'
+    ? getWindowBounds(CURRENT_LOOKBACK_WINDOW, now)
+    : getWindowBounds(range, now);
+
+export const buildFeaturedWork = (
+  prs: CommitLog[],
+  issues: IssueBounty[],
+  range: TrendTimeRange,
+  now = new Date(),
+): DashboardFeaturedWork => {
+  const window = getFeaturedWorkWindow(range, now);
+  const linesChanged = (pr: CommitLog) =>
+    parseNumber(pr.additions) + parseNumber(pr.deletions);
+
+  const mergedPrCandidates = [...prs]
+    .filter(
+      (pr) =>
+        !!pr.repository &&
+        !!pr.pullRequestTitle &&
+        getPrStatusLabel(pr) === 'Merged' &&
+        isWithinWindow(toTimestamp(pr.mergedAt), window),
+    )
+    .sort((a, b) => {
+      const scoreDiff = parseNumber(b.score) - parseNumber(a.score);
+      if (scoreDiff !== 0) return scoreDiff;
+
+      const linesDiff = linesChanged(b) - linesChanged(a);
+      if (linesDiff !== 0) return linesDiff;
+
+      const commitsDiff =
+        parseNumber(b.commitCount) - parseNumber(a.commitCount);
+      if (commitsDiff !== 0) return commitsDiff;
+
+      const mergedAtDiff =
+        (toTimestamp(b.mergedAt) ?? 0) - (toTimestamp(a.mergedAt) ?? 0);
+      if (mergedAtDiff !== 0) return mergedAtDiff;
+
+      return b.pullRequestNumber - a.pullRequestNumber;
+    })
+    .map((pr) => ({
+      repository: pr.repository,
+      pullRequestNumber: pr.pullRequestNumber,
+      title: pr.pullRequestTitle,
+      author: pr.author || 'unknown',
+      score: parseNumber(pr.score),
+      additions: parseNumber(pr.additions),
+      deletions: parseNumber(pr.deletions),
+    }));
+
+  const topPrs = takeUniqueByRepo(
+    mergedPrCandidates,
+    MAX_FEATURED_WORK_PER_KIND,
+  );
+
+  const issueCompletedTimestamp = (issue: IssueBounty) =>
+    toTimestamp(issue.completedAt) ?? toTimestamp(issue.closedAt);
+
+  const completedIssueCandidates = [...issues]
+    .filter(
+      (issue) =>
+        issue.status === 'completed' &&
+        !!issue.repositoryFullName &&
+        !!issueCompletedTimestamp(issue),
+    )
+    .sort((a, b) => {
+      const targetDiff =
+        parseNumber(b.targetBounty) - parseNumber(a.targetBounty);
+      if (targetDiff !== 0) return targetDiff;
+
+      const bountyDiff =
+        parseNumber(b.bountyAmount) - parseNumber(a.bountyAmount);
+      if (bountyDiff !== 0) return bountyDiff;
+
+      const completedDiff =
+        (issueCompletedTimestamp(b) ?? 0) - (issueCompletedTimestamp(a) ?? 0);
+      if (completedDiff !== 0) return completedDiff;
+
+      return b.id - a.id;
+    })
+    .map((issue) => ({
+      id: issue.id,
+      repositoryFullName: issue.repositoryFullName,
+      issueNumber: issue.issueNumber,
+      title: issue.title ?? `Issue #${issue.issueNumber}`,
+      targetBounty: parseNumber(issue.targetBounty),
+      status: issue.status,
+    }));
+
+  const openIssueCandidates = [...issues]
+    .filter(
+      (issue) =>
+        (issue.status === 'active' || issue.status === 'registered') &&
+        !!issue.repositoryFullName &&
+        isWithinWindow(toTimestamp(issue.createdAt), window),
+    )
+    .sort((a, b) => {
+      const targetDiff =
+        parseNumber(b.targetBounty) - parseNumber(a.targetBounty);
+      if (targetDiff !== 0) return targetDiff;
+
+      const bountyDiff =
+        parseNumber(b.bountyAmount) - parseNumber(a.bountyAmount);
+      if (bountyDiff !== 0) return bountyDiff;
+
+      const createdAtDiff =
+        (toTimestamp(b.createdAt) ?? 0) - (toTimestamp(a.createdAt) ?? 0);
+      if (createdAtDiff !== 0) return createdAtDiff;
+
+      return b.id - a.id;
+    })
+    .map((issue) => ({
+      id: issue.id,
+      repositoryFullName: issue.repositoryFullName,
+      issueNumber: issue.issueNumber,
+      title: issue.title ?? `Issue #${issue.issueNumber}`,
+      targetBounty: parseNumber(issue.targetBounty),
+      status: issue.status,
+    }));
+
+  // Prioritize completed issues, then backfill with open issues.
+  const topIssues = takeUniqueIssueRepo(
+    [...completedIssueCandidates, ...openIssueCandidates],
+    MAX_FEATURED_WORK_PER_KIND,
+  );
+
+  return { prs: topPrs, issues: topIssues };
 };

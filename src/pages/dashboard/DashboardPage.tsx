@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Box, useMediaQuery } from '@mui/material';
 import { Page } from '../../components/layout';
 import { SEO } from '../../components';
-import theme, { scrollbarSx } from '../../theme';
+import theme from '../../theme';
 import { type TrendTimeRange } from './dashboardData';
 import useDashboardData from './useDashboardData';
 import ActiveNetwork from './views/ActiveNetwork';
+import DashboardFeaturedWork from './views/DashboardFeaturedWork';
 import DashboardTopContributors from './views/DashboardTopContributors';
 import LiveSidebar from './views/LiveSidebar';
 
@@ -21,6 +22,7 @@ const DashboardFeaturePage: React.FC = () => {
     overview,
     trendLabels,
     trendSeries,
+    featuredWork,
     featuredContributors,
     featuredDiscoveryContributors,
     isLoading,
@@ -48,11 +50,13 @@ const DashboardFeaturePage: React.FC = () => {
         <Box
           sx={{
             width: '100%',
-            height: showSidebarRight ? 'calc(100vh - 64px)' : 'auto',
             display: 'flex',
             flexDirection: showSidebarRight ? 'row' : 'column',
             gap: { xs: 1.5, sm: 1.5, md: 1.75, lg: 2 },
-            overflow: 'hidden',
+            // Let the page scroll on wide layouts so content below the fold
+            // (e.g. OSS & bounties) stays reachable. Nested overflow + charts
+            // often traps wheel scrolling on desktop.
+            alignItems: 'flex-start',
           }}
         >
           <Box
@@ -61,11 +65,9 @@ const DashboardFeaturePage: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               gap: { xs: 1.35, sm: 1.15, md: 1.25 },
-              minHeight: 0,
-              overflow: showSidebarRight ? 'auto' : 'visible',
               minWidth: 0,
               pr: showSidebarRight ? 0.75 : 0,
-              ...scrollbarSx,
+              width: showSidebarRight ? undefined : '100%',
             }}
           >
             <ActiveNetwork
@@ -76,6 +78,11 @@ const DashboardFeaturePage: React.FC = () => {
               kpis={kpis}
               isLoading={isLoading}
               onRangeChange={setRange}
+            />
+
+            <DashboardFeaturedWork
+              featuredWork={featuredWork}
+              isLoading={isLoading}
             />
 
             <DashboardTopContributors
