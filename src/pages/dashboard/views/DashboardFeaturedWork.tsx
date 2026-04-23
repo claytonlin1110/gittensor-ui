@@ -166,54 +166,57 @@ const DashboardFeaturedWork: React.FC<DashboardFeaturedWorkProps> = ({
                       <Stack spacing={0.8}>
                         <Stack
                           direction="row"
+                          spacing={0.7}
                           alignItems="center"
                           justifyContent="space-between"
+                          sx={{ minWidth: 0 }}
                         >
-                          <Box />
+                          <Stack
+                            direction="row"
+                            spacing={0.7}
+                            alignItems="center"
+                            sx={{ minWidth: 0, flex: 1 }}
+                          >
+                            <Avatar
+                              src={getGithubAvatarSrc(repoOwner)}
+                              alt={repoOwner || pr.repository}
+                              sx={{
+                                width: 24,
+                                height: 24,
+                                fontSize: '0.68rem',
+                                fontFamily: mono,
+                                bgcolor: theme.palette.surface.light,
+                                border: `1px solid ${theme.palette.border.light}`,
+                              }}
+                            >
+                              {getInitials(repoName)}
+                            </Avatar>
+                            <Typography
+                              sx={{
+                                fontFamily: mono,
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                color: alpha(theme.palette.text.primary, 0.82),
+                                minWidth: 0,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {pr.repository}
+                            </Typography>
+                          </Stack>
                           <Typography
                             sx={{
                               fontFamily: mono,
                               fontSize: '0.84rem',
                               fontWeight: 700,
                               color: alpha(theme.palette.text.primary, 0.88),
+                              ml: 1,
+                              flexShrink: 0,
                             }}
                           >
                             #{pr.pullRequestNumber}
-                          </Typography>
-                        </Stack>
-                        <Stack
-                          direction="row"
-                          spacing={0.7}
-                          alignItems="center"
-                          sx={{ minWidth: 0 }}
-                        >
-                          <Avatar
-                            src={getGithubAvatarSrc(repoOwner)}
-                            alt={repoOwner || pr.repository}
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              fontSize: '0.68rem',
-                              fontFamily: mono,
-                              bgcolor: theme.palette.surface.light,
-                              border: `1px solid ${theme.palette.border.light}`,
-                            }}
-                          >
-                            {getInitials(repoName)}
-                          </Avatar>
-                          <Typography
-                            sx={{
-                              fontFamily: mono,
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              color: alpha(theme.palette.text.primary, 0.82),
-                              minWidth: 0,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {pr.repository}
                           </Typography>
                         </Stack>
                         <Typography
@@ -424,54 +427,57 @@ const DashboardFeaturedWork: React.FC<DashboardFeaturedWorkProps> = ({
                       <Stack spacing={0.8}>
                         <Stack
                           direction="row"
+                          spacing={0.7}
                           alignItems="center"
                           justifyContent="space-between"
+                          sx={{ minWidth: 0 }}
                         >
-                          <Box />
+                          <Stack
+                            direction="row"
+                            spacing={0.7}
+                            alignItems="center"
+                            sx={{ minWidth: 0, flex: 1 }}
+                          >
+                            <Avatar
+                              src={getGithubAvatarSrc(repoOwner)}
+                              alt={repoOwner || issue.repositoryFullName}
+                              sx={{
+                                width: 24,
+                                height: 24,
+                                fontSize: '0.68rem',
+                                fontFamily: mono,
+                                bgcolor: theme.palette.surface.light,
+                                border: `1px solid ${theme.palette.border.light}`,
+                              }}
+                            >
+                              {getInitials(repoName)}
+                            </Avatar>
+                            <Typography
+                              sx={{
+                                fontFamily: mono,
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                color: alpha(theme.palette.text.primary, 0.82),
+                                minWidth: 0,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {issue.repositoryFullName}
+                            </Typography>
+                          </Stack>
                           <Typography
                             sx={{
                               fontFamily: mono,
                               fontSize: '0.84rem',
                               fontWeight: 700,
                               color: alpha(theme.palette.text.primary, 0.88),
+                              ml: 1,
+                              flexShrink: 0,
                             }}
                           >
                             #{issue.issueNumber}
-                          </Typography>
-                        </Stack>
-                        <Stack
-                          direction="row"
-                          spacing={0.7}
-                          alignItems="center"
-                          sx={{ minWidth: 0 }}
-                        >
-                          <Avatar
-                            src={getGithubAvatarSrc(repoOwner)}
-                            alt={repoOwner || issue.repositoryFullName}
-                            sx={{
-                              width: 24,
-                              height: 24,
-                              fontSize: '0.68rem',
-                              fontFamily: mono,
-                              bgcolor: theme.palette.surface.light,
-                              border: `1px solid ${theme.palette.border.light}`,
-                            }}
-                          >
-                            {getInitials(repoName)}
-                          </Avatar>
-                          <Typography
-                            sx={{
-                              fontFamily: mono,
-                              fontSize: '0.74rem',
-                              fontWeight: 700,
-                              color: alpha(theme.palette.text.primary, 0.82),
-                              minWidth: 0,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {issue.repositoryFullName}
                           </Typography>
                         </Stack>
                         <Typography
